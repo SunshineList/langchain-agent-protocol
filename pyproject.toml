@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Tuple", email = "wzw571603974@qq.com"}
 ]
 keywords = ["langchain", "agent", "llm", "ai", "chatbot", "protocol"]
 classifiers = [
@@ -49,10 +49,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/langchain-agent-protocol"
+Homepage = "https://github.com/SunshineList/langchain-agent-protocol"
 Documentation = "https://langchain-agent-protocol.readthedocs.io"
-Repository = "https://github.com/yourusername/langchain-agent-protocol"
-"Bug Tracker" = "https://github.com/yourusername/langchain-agent-protocol/issues"
+Repository = "https://github.com/SunshineList/langchain-agent-protocol"
+"Bug Tracker" = "https://github.com/SunshineList/langchain-agent-protocol/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
