@@ -13,6 +13,11 @@ from .base_llm_adapter import BaseLLMAdapter
 from .config import AgentConfig
 from ..converters.message_converter import MessageConverter
 from ..processors.stream_processor import StreamEventProcessor
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.outputs import ChatResult, ChatGeneration, ChatGenerationChunk
+from langchain_core.messages import AIMessageChunk
+from pydantic import ConfigDict
+        
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +28,7 @@ class ChatLLMBridge:
     """
     
     def __init__(self, llm_adapter: BaseLLMAdapter, config: AgentConfig):
-        from langchain_core.language_models.chat_models import BaseChatModel
-        from langchain_core.outputs import ChatResult, ChatGeneration, ChatGenerationChunk
-        from langchain_core.messages import AIMessageChunk
-        
+      
         self.llm_adapter = llm_adapter
         self.config = config
         self.message_converter = MessageConverter()
@@ -36,20 +38,23 @@ class ChatLLMBridge:
         class DynamicChatModel(BaseChatModel):
             """动态创建的聊天模型"""
             
-            adapter = llm_adapter
-            converter = MessageConverter()
-            tools = []
+            # 配置 Pydantic 模型：允许任意类型和额外字段
+            model_config = ConfigDict(
+                arbitrary_types_allowed=True,
+                extra='allow',  # 允许额外字段
+            )
             
             def bind_tools(inner_self, tools: List[Any], **kwargs) -> 'DynamicChatModel':
                 """绑定工具"""
                 from langchain_core.utils.function_calling import convert_to_openai_tool
-                inner_self.tools = [convert_to_openai_tool(t) for t in tools]
+                # 使用 object.__setattr__ 绕过 Pydantic 验证
+                object.__setattr__(inner_self, 'tools', [convert_to_openai_tool(t) for t in tools])
                 return inner_self
             
             def _generate(inner_self, messages, stop=None, run_manager=None, **kwargs):
                 """同步生成"""
                 formatted = inner_self.converter.langchain_to_openai(messages)
-                tools = kwargs.get("tools") or inner_self.tools
+                tools = kwargs.get("tools") or getattr(inner_self, 'tools', [])
                 
                 result = inner_self.adapter.chat(
                     formatted,
@@ -74,7 +79,7 @@ class ChatLLMBridge:
                 from ..parsers.tool_call_parser import ToolCallParser
                 
                 formatted = inner_self.converter.langchain_to_openai(messages)
-                tools = kwargs.get("tools") or inner_self.tools
+                tools = kwargs.get("tools") or getattr(inner_self, 'tools', [])
                 
                 for chunk in inner_self.adapter.chat_stream(
                     formatted,
@@ -100,7 +105,11 @@ class ChatLLMBridge:
             def _llm_type(inner_self) -> str:
                 return "universal_agent_bridge"
         
+        # 创建实例并使用 object.__setattr__ 设置属性
         self.chat_model = DynamicChatModel()
+        object.__setattr__(self.chat_model, 'adapter', llm_adapter)
+        object.__setattr__(self.chat_model, 'converter', MessageConverter())
+        object.__setattr__(self.chat_model, 'tools', [])
 
 
 class UniversalAgent:
