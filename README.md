@@ -5,9 +5,10 @@
 ## 特性
 
 ✨ **框架无关** - Django / Flask / FastAPI / 纯Python脚本都能用  
+🚀 **逐 token 流式** - 真正的 token 级别流式输出，极致响应体验  
+⚡ **全异步支持** - 原生支持 `asyncio`，完美契合 FastAPI  
 🔌 **插件化设计** - LLM适配器、配置、工具都可插拔  
 📦 **零移植成本** - 配置和工具定义直接复制  
-🚀 **生产就绪** - 内置日志、错误处理、性能监控  
 🎯 **类型安全** - 完整的类型注解
 
 ## 快速开始
@@ -172,8 +173,9 @@ async def chat(message: str):
 
 @app.get("/chat/stream")
 async def chat_stream(message: str):
+    # 使用异步流式接口，实现逐字输出
     return StreamingResponse(
-        agent.run_stream(message),
+        agent.run_stream_async(message),
         media_type="text/plain"
     )
 ```
@@ -212,13 +214,16 @@ agent = UniversalAgent(
 创建 Agent 实例
 
 #### `run(message: str) -> str`
-同步执行
+同步执行。
 
 #### `run_stream(message: str) -> Generator[str]`
-流式执行
+同步流式执行 (同步生成器)，适用于 Django/Flask 等环境实现逐字输出。
+
+#### `run_stream_async(message: str) -> AsyncGenerator[str]`
+异步流式执行 (异步生成器)，适用于 FastAPI/Websocket 等异步环境。
 
 #### `quick_start(api_key, model, tools, system_prompt, **kwargs)`
-快速创建 Agent 的类方法
+快速创建 Agent 的便捷类方法。
 
 ### AgentConfig
 

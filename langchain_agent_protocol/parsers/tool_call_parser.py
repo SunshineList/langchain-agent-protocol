@@ -63,7 +63,7 @@ class ToolCallParser:
     @staticmethod
     def validate_tool_call(tool_call: Dict[str, Any]) -> bool:
         """
-        验证工具调用数据的完整性
+        验证工具调用数据的完整性 (核心字段验证)
         
         Args:
             tool_call: 工具调用字典
@@ -74,16 +74,10 @@ class ToolCallParser:
         if not isinstance(tool_call, dict):
             return False
         
-        # 检查必需字段
-        if "name" not in tool_call:
-            logger.warning("Tool call missing 'name' field")
+        # 核心字段校验 (适配器应已保证输出符合此格式)
+        if "name" not in tool_call and "args" not in tool_call and "id" not in tool_call:
             return False
-        
-        # 检查 args 字段 (可选但应该是字典)
-        if "args" in tool_call and not isinstance(tool_call.get("args"), dict):
-            logger.warning(f"Tool call '{tool_call['name']}' has invalid args type")
-            return False
-        
+            
         return True
     
     @staticmethod

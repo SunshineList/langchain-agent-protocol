@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "langchain-agent-protocol"
-version = "0.1.4"
+version = "0.1.7"
 description = "A universal, framework-agnostic LangChain Agent protocol for cross-project portability"
 readme = "README.md"
 requires-python = ">=3.8"

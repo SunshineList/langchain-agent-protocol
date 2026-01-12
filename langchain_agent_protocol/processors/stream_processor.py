@@ -86,6 +86,41 @@ class StreamEventProcessor:
         elif last_msg.content:
             yield last_msg.content
     
+    def process_message_chunk(
+        self,
+        chunk: Any,
+        metadata: Dict[str, Any]
+    ) -> Generator[str, None, None]:
+        """
+        处理 stream_mode='messages' 返回的消息块 (token 级别流式)
+        
+        Args:
+            chunk: AIMessageChunk 消息块
+            metadata: 元数据字典，包含节点信息
+            
+        Yields:
+            格式化的输出文本 (逐 token)
+        """
+        from langchain_core.messages import AIMessageChunk
+        
+        if not isinstance(chunk, AIMessageChunk):
+            return
+        
+        # 处理工具调用 (首次出现工具名称时通知)
+        if hasattr(chunk, 'tool_call_chunks') and chunk.tool_call_chunks:
+            for tc in chunk.tool_call_chunks:
+                tool_name = tc.get("name") if isinstance(tc, dict) else getattr(tc, 'name', None)
+                if tool_name:
+                    notification = self.tool_parser.format_tool_call_notification(
+                        tool_name,
+                        self.tool_name_map
+                    )
+                    yield notification
+        
+        # 处理文本内容 (逐 token yield)
+        if chunk.content:
+            yield chunk.content
+    
     def process_error(self, error: Exception) -> str:
         """
         处理错误并格式化错误消息

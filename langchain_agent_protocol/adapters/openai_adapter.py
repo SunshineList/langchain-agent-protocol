@@ -163,19 +163,23 @@ class OpenAIAdapter(BaseLLMAdapter):
                 if delta.content:
                     yield delta.content
                 
-                # 工具调用
+                # 工具调用 (标准化扁平格式)
                 elif hasattr(delta, 'tool_calls') and delta.tool_calls:
-                    tool_calls_data = [
-                        {
-                            "id": tc.id if hasattr(tc, 'id') else None,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function.name if hasattr(tc.function, 'name') else "",
-                                "arguments": tc.function.arguments if hasattr(tc.function, 'arguments') else ""
-                            }
+                    tool_calls_data = []
+                    for tc in delta.tool_calls:
+                        chunk = {
+                            "index": getattr(tc, 'index', None),
+                            "id": getattr(tc, 'id', None),
                         }
-                        for tc in delta.tool_calls
-                    ]
+                        
+                        if hasattr(tc, 'function'):
+                            if hasattr(tc.function, 'name') and tc.function.name:
+                                chunk["name"] = tc.function.name
+                            if hasattr(tc.function, 'arguments') and tc.function.arguments:
+                                chunk["args"] = tc.function.arguments
+                                
+                        tool_calls_data.append(chunk)
+
                     yield json.dumps({"tool_calls_chunk": tool_calls_data}, ensure_ascii=False)
                     
         except Exception as e:

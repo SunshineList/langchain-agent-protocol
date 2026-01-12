@@ -6,7 +6,7 @@ Universal Agent - 通用框架无关的 LangChain Agent
 """
 
 import logging
-from typing import List, Any, Generator, Optional, Dict
+from typing import List, Any, Generator, Optional, Dict, AsyncGenerator
 from langchain.agents import create_agent
 
 from .base_llm_adapter import BaseLLMAdapter
@@ -203,27 +203,59 @@ class UniversalAgent:
     
     def run_stream(self, message: str, **kwargs: Any) -> Generator[str, None, None]:
         """
-        流式运行 Agent
+        流式运行 Agent (token 级别流式输出)
         
         Args:
             message: 用户输入消息
             **kwargs: 额外参数
             
         Yields:
-            Agent 的流式输出 (包括工具调用通知和响应内容)
+            Agent 的流式输出 (逐 token，包括工具调用通知)
         """
         agent = self._get_agent()
         
         try:
             logger.info(f"Running agent stream with message: {message[:50]}...")
             
-            for event in agent.stream({
-                "messages": [{"role": "user", "content": message}]
-            }):
-                yield from self.stream_processor.process_event(event)
+            # 使用 stream_mode="messages" 获取 token 级别流式输出
+            for chunk, metadata in agent.stream(
+                {"messages": [{"role": "user", "content": message}]},
+                stream_mode="messages"
+            ):
+                yield from self.stream_processor.process_message_chunk(chunk, metadata)
                 
         except Exception as e:
             yield self.stream_processor.process_error(e)
+
+    async def run_stream_async(
+        self, message: str, **kwargs: Any
+    ) -> AsyncGenerator[str, None]:
+        """
+        异步流式运行 Agent (token 级别流式输出)
+        
+        Args:
+            message: 用户输入消息
+            **kwargs: 额外参数
+            
+        Yields:
+            Agent 的流式输出 (逐 token，包括工具调用通知)
+        """
+        agent = self._get_agent()
+        
+        try:
+            logger.info(f"Running agent async stream with message: {message[:50]}...")
+            
+            # 使用 astream 和 stream_mode="messages" 获取异步 token 级别流式输出
+            async for chunk, metadata in agent.astream(
+                {"messages": [{"role": "user", "content": message}]},
+                stream_mode="messages"
+            ):
+                for text in self.stream_processor.process_message_chunk(chunk, metadata):
+                    yield text
+                    
+        except Exception as e:
+            yield self.stream_processor.process_error(e)
+
     
     @classmethod
     def quick_start(
