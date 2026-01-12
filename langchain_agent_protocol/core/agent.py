@@ -77,10 +77,10 @@ class ChatLLMBridge:
             def _stream(inner_self, messages, stop=None, run_manager=None, **kwargs):
                 """流式生成"""
                 from ..parsers.tool_call_parser import ToolCallParser
-                
+
                 formatted = inner_self.converter.langchain_to_openai(messages)
                 tools = kwargs.get("tools") or getattr(inner_self, 'tools', [])
-                
+
                 for chunk in inner_self.adapter.chat_stream(
                     formatted,
                     tools=tools if tools else None,
@@ -89,13 +89,30 @@ class ChatLLMBridge:
                     **kwargs
                 ):
                     tool_calls = ToolCallParser.extract_tool_calls_from_chunk(chunk)
-                    
+
                     if tool_calls:
+                        # 转换为 LangChain ToolCallChunk 格式 (扁平结构)
+                        tool_call_chunks = []
+                        for tc in tool_calls:
+                            # 处理 OpenAI 格式 {'function': {'name': ..., 'arguments': ...}}
+                            if 'function' in tc:
+                                func = tc['function']
+                                chunk = {
+                                    'index': tc.get('index'),
+                                    'id': tc.get('id'),
+                                    'name': func.get('name') if func else None,
+                                    'args': func.get('arguments') if func else None,
+                                }
+                                # 移除 None 值
+                                tool_call_chunks.append({k: v for k, v in chunk.items() if v is not None})
+                            else:
+                                # 已经是扁平格式，移除 None 值
+                                tool_call_chunks.append({k: v for k, v in tc.items() if v is not None})
+
                         yield ChatGenerationChunk(
                             message=AIMessageChunk(
                                 content="",
-                                additional_kwargs={"tool_calls": tool_calls},
-                                tool_call_chunks=tool_calls
+                                tool_call_chunks=tool_call_chunks
                             )
                         )
                     else:

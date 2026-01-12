@@ -167,18 +167,18 @@ class OpenAIAdapter(BaseLLMAdapter):
                 elif hasattr(delta, 'tool_calls') and delta.tool_calls:
                     tool_calls_data = []
                     for tc in delta.tool_calls:
-                        chunk = {
+                        tc_chunk = {
                             "index": getattr(tc, 'index', None),
                             "id": getattr(tc, 'id', None),
                         }
                         
                         if hasattr(tc, 'function'):
                             if hasattr(tc.function, 'name') and tc.function.name:
-                                chunk["name"] = tc.function.name
+                                tc_chunk["name"] = tc.function.name
                             if hasattr(tc.function, 'arguments') and tc.function.arguments:
-                                chunk["args"] = tc.function.arguments
+                                tc_chunk["args"] = tc.function.arguments
                                 
-                        tool_calls_data.append(chunk)
+                        tool_calls_data.append(tc_chunk)
 
                     yield json.dumps({"tool_calls_chunk": tool_calls_data}, ensure_ascii=False)
                     
